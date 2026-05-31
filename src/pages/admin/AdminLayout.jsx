@@ -20,6 +20,16 @@ export default function AdminLayout() {
         <div className="p-5 font-bold border-b border-[var(--border)]">
           Admin <span className="text-sky-400">Panel</span>
         </div>
+       <Link 
+  to="/admin/sights" 
+  className={({ isActive }) => 
+    `flex items-center gap-3 px-4 py-2 rounded-lg transition ${
+      isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
+    }`
+  }
+>
+  🏛️ Достопримечательности
+</Link>
         <nav className="flex-1 p-3 space-y-1">
           {LINKS.map(({ to, label, icon: Icon, end }) => (
             <Link
@@ -34,6 +44,7 @@ export default function AdminLayout() {
             >
               <Icon size={18} /> {label}
             </Link>
+            
           ))}
         </nav>
         <div className="p-3 border-t border-[var(--border)] space-y-1">

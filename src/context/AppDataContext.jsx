@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useMemo } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react'
 import { DEFAULT_ROUTES } from '../data/content'
 import {
   getStoredRoutes,
@@ -15,6 +15,17 @@ export function AppDataProvider({ children }) {
   const [routes, setRoutes] = useState(() => getStoredRoutes(DEFAULT_ROUTES))
   const [messages, setMessages] = useState(() => getMessages())
   const [admin, setAdmin] = useState(isAdminLoggedIn)
+  
+  // НОВЫЙ КОД: состояние для достопримечательностей
+  const [sights, setSights] = useState(() => {
+    const saved = localStorage.getItem('karakol_sights')
+    return saved ? JSON.parse(saved) : []
+  })
+
+  // НОВЫЙ КОД: сохраняем sights в localStorage при изменении
+  useEffect(() => {
+    localStorage.setItem('karakol_sights', JSON.stringify(sights))
+  }, [sights])
 
   const refreshRoutes = useCallback(() => {
     setRoutes(getStoredRoutes(DEFAULT_ROUTES))
@@ -41,18 +52,35 @@ export function AppDataProvider({ children }) {
     setAdmin(false)
   }, [])
 
+  // НОВЫЙ КОД: функции для работы с достопримечательностями
+  const addSight = useCallback((sight) => {
+    setSights(prev => [...prev, { ...sight, id: Date.now() }])
+  }, [])
+
+  const updateSight = useCallback((id, updatedSight) => {
+    setSights(prev => prev.map(s => s.id === id ? { ...updatedSight, id } : s))
+  }, [])
+
+  const deleteSight = useCallback((id) => {
+    setSights(prev => prev.filter(s => s.id !== id))
+  }, [])
+
   const value = useMemo(
     () => ({
       routes,
       messages,
       admin,
+      sights,           // ← добавили
       refreshRoutes,
       updateRoutes,
       submitMessage,
       loginAdmin,
       logoutAdmin,
+      addSight,         // ← добавили
+      updateSight,      // ← добавили
+      deleteSight,      // ← добавили
     }),
-    [routes, messages, admin, refreshRoutes, updateRoutes, submitMessage, loginAdmin, logoutAdmin],
+    [routes, messages, admin, sights, refreshRoutes, updateRoutes, submitMessage, loginAdmin, logoutAdmin, addSight, updateSight, deleteSight],
   )
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>

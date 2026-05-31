@@ -16,6 +16,7 @@ import AdminLoginPage from './pages/admin/AdminLoginPage'
 import AdminRoutesPage from './pages/admin/AdminRoutesPage'
 import AdminMessagesPage from './pages/admin/AdminMessagesPage'
 import AdminContent from './pages/admin/AdminContent'
+import AdminSightsPage from './pages/admin/AdminSightsPage'
 
 export default function App() {
   return (
@@ -35,6 +36,8 @@ export default function App() {
 
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminLayout />}>
+          <Route path="sights" element={<AdminSightsPage />} />
+          <Route path="sights" element={<AdminSightsPage />} />
             <Route index element={<AdminDashboardPage />} />
             <Route path="routes" element={<AdminRoutesPage />} />
             <Route path="messages" element={<AdminMessagesPage />} />
