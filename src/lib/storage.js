@@ -1,5 +1,7 @@
 const KEYS = {
   routes: 'karakol_routes',
+  sights: 'karakol_sights',
+  food: 'karakol_food_places',
   messages: 'karakol_messages',
   admin: 'karakol_admin_logged_in',
   itineraries: 'karakol_saved_itineraries',
@@ -20,6 +22,39 @@ export function getStoredRoutes(defaultRoutes) {
 export function saveRoutes(routes) {
   localStorage.setItem(KEYS.routes, JSON.stringify(routes))
 }
+
+export function getStoredSights(defaultSights) {
+  try {
+    const raw = localStorage.getItem(KEYS.sights)
+    if (!raw) return defaultSights
+    const stored = JSON.parse(raw)
+    if (Array.isArray(stored) && stored.length > 0) return stored
+    return defaultSights
+  } catch {
+    return defaultSights
+  }
+}
+
+export function saveSights(sights) {
+  localStorage.setItem(KEYS.sights, JSON.stringify(sights))
+}
+
+export function getStoredFood(defaultFood) {
+  try {
+    const raw = localStorage.getItem(KEYS.food)
+    if (!raw) return defaultFood
+    const stored = JSON.parse(raw)
+    if (Array.isArray(stored) && stored.length > 0) return stored
+    return defaultFood
+  } catch {
+    return defaultFood
+  }
+}
+
+export function saveFood(food) {
+  localStorage.setItem(KEYS.food, JSON.stringify(food))
+}
+
 
 export function getMessages() {
   try {

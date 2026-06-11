@@ -1,3 +1,5 @@
+import { getPlannerTips } from '../i18n'
+
 const CENTER = { lat: 42.4907, lng: 78.393 }
 
 function distanceKm(a, b) {
@@ -32,86 +34,80 @@ function sortDayStops(stops) {
  * @param {string[]} params.selectedIds — выбранные POI id
  * @param {Array} params.allPois
  */
-export function buildItinerary({ days, interests, selectedIds, allPois }) {
-  const interestSet = new Set(interests)
-  let pool = allPois.filter((p) => p.interests?.some((i) => interestSet.has(i)))
-
-  if (selectedIds.length > 0) {
-    const selected = allPois.filter((p) => selectedIds.includes(p.id))
-    const rest = pool.filter((p) => !selectedIds.includes(p.id))
-    pool = [...selected, ...rest]
+export function buildItinerary({ selectedIds = [], allPois = [], lang = 'ru' }) {
+  const selected = allPois.filter((p) => selectedIds.includes(p.id))
+  if (selected.length === 0) {
+    return {
+      days: [],
+      totalStops: 0,
+      tips: [],
+    }
   }
 
-  const maxPerDay = days === 1 ? 5 : days === 2 ? 4 : 3
-  const maxTotal = maxPerDay * days
-  pool = pool.slice(0, maxTotal)
+  // Nearest-neighbor sort starting from Karakol center
+  const sortedStops = []
+  let current = CENTER
+  const unvisited = [...selected]
 
-  const byZone = { city: [], near: [], mountain: [] }
-  pool.forEach((p) => {
-    const z = p.zone || 'city'
-    if (byZone[z]) byZone[z].push(p)
-    else byZone.city.push(p)
+  while (unvisited.length > 0) {
+    let closestIdx = 0
+    let minD = distanceKm(current, unvisited[0])
+    for (let i = 1; i < unvisited.length; i++) {
+      const d = distanceKm(current, unvisited[i])
+      if (d < minD) {
+        minD = d
+        closestIdx = i
+      }
+    }
+    current = unvisited[closestIdx]
+    sortedStops.push(unvisited.splice(closestIdx, 1)[0])
+  }
+
+  // Generate timeline starting at 09:00 (540 mins)
+  let time = 9 * 60
+  const timeline = sortedStops.map((stop, i) => {
+    const start = time
+    const dur = stop.durationMin || 60
+    time += dur
+    const end = time
+    time += 30 // 30-min transit/break
+    return {
+      ...stop,
+      order: i + 1,
+      startTime: formatTime(start),
+      endTime: formatTime(end),
+    }
   })
 
-  const dayPlans = []
-  let dayIndex = 0
-
-  const distribute = (items, preferDay) => {
-    while (items.length && dayIndex < days) {
-      const day = dayPlans[dayIndex] || (dayPlans[dayIndex] = { day: dayIndex + 1, stops: [], totalMin: 0 })
-      if (day.stops.length >= maxPerDay) {
-        dayIndex++
-        continue
-      }
-      const next = items.shift()
-      if (preferDay !== undefined && dayIndex < preferDay) {
-        dayIndex = preferDay
-        continue
-      }
-      day.stops.push(next)
-      day.totalMin += next.durationMin || 60
-      if (day.stops.length >= maxPerDay) dayIndex++
-    }
-    items.length && distribute(items)
+  // Calculate total sequential distance
+  let totalDist = 0
+  for (let i = 1; i < timeline.length; i++) {
+    totalDist += distanceKm(timeline[i - 1], timeline[i])
   }
 
-  distribute([...byZone.city])
-  if (days >= 2) distribute([...byZone.near], 1)
-  if (days >= 3) distribute([...byZone.mountain], 2)
-  else distribute([...byZone.near, ...byZone.mountain])
+  const resultDay = {
+    day: 1,
+    stops: timeline,
+    totalMin: timeline.reduce((sum, s) => sum + (s.durationMin || 60), 0),
+    distanceKm: Math.round(totalDist * 10) / 10,
+  }
 
-  const result = dayPlans
-    .filter(Boolean)
-    .map((d) => {
-      const ordered = sortDayStops(d.stops)
-      let time = 9 * 60
-      const timeline = ordered.map((stop, i) => {
-        const start = time
-        const dur = stop.durationMin || 60
-        time += dur + 30
-        return {
-          ...stop,
-          order: i + 1,
-          startTime: formatTime(start),
-          endTime: formatTime(time - 30),
-        }
-      })
-      const dist = timeline.reduce((sum, s, i) => {
-        if (i === 0) return sum
-        return sum + distanceKm(timeline[i - 1], s)
-      }, 0)
-      return {
-        day: d.day,
-        stops: timeline,
-        totalMin: d.totalMin,
-        distanceKm: Math.round(dist * 10) / 10,
-      }
-    })
+  const tips = [
+    lang === 'en'
+      ? 'Start your day in the city center — easier to navigate.'
+      : 'Начните день с центра города — так проще ориентироваться.',
+    lang === 'en'
+      ? 'Lunch at the market or Ashlyanfu café is a Karakol must.'
+      : 'Обед на рынке или в кафе «Ашлянфу» — must-have в Караколе.',
+    lang === 'en'
+      ? 'Save your plan and show it to a guide or taxi driver.'
+      : 'Сохраните маршрут и покажите гиду или водителю такси.',
+  ]
 
   return {
-    days: result,
-    totalStops: result.reduce((n, d) => n + d.stops.length, 0),
-    tips: getTips(days, interests),
+    days: [resultDay],
+    totalStops: timeline.length,
+    tips,
   }
 }
 
@@ -121,29 +117,6 @@ function formatTime(minutes) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-function getTips(days, interests) {
-  const tips = ['Начните день с центра города — так проще ориентироваться.']
-  if (interests.includes('nature') && days >= 2) {
-    tips.push('Горные точки лучше планировать на 2–3-й день после акклиматизации.')
-  }
-  if (interests.includes('food')) {
-    tips.push('Обед на рынке или в кафе «Ашлянфу» — must-have в Караколе.')
-  }
-  tips.push('Сохраните маршрут и покажите гиду или водителю такси.')
-  return tips
-}
-
-export function suggestReadyRoutes(routes, interests, days) {
-  const interestSet = new Set(interests)
-  return routes
-    .filter((r) => {
-      const d = parseInt(r.duration, 10) || 1
-      if (days === 1 && d > 1) return false
-      if (days === 2 && d > 3) return false
-      if (r.type === 'cultural' && interestSet.has('food')) return true
-      if (r.type === 'hiking' && interestSet.has('nature')) return true
-      if (r.type === 'cultural' && interestSet.has('culture')) return true
-      return d <= days + 1
-    })
-    .slice(0, 3)
+export function suggestReadyRoutes() {
+  return []
 }

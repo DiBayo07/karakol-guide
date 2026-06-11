@@ -1,8 +1,12 @@
-import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react'
-import { DEFAULT_ROUTES } from '../data/content'
+import { createContext, useContext, useState, useCallback, useMemo } from 'react'
+import { DEFAULT_ROUTES, SIGHTS, FOOD_PLACES } from '../data/content'
 import {
   getStoredRoutes,
   saveRoutes,
+  getStoredSights,
+  saveSights,
+  getStoredFood,
+  saveFood,
   getMessages,
   addMessage,
   isAdminLoggedIn,
@@ -13,19 +17,10 @@ const AppDataContext = createContext(null)
 
 export function AppDataProvider({ children }) {
   const [routes, setRoutes] = useState(() => getStoredRoutes(DEFAULT_ROUTES))
+  const [sights, setSights] = useState(() => getStoredSights(SIGHTS))
+  const [foodPlaces, setFoodPlaces] = useState(() => getStoredFood(FOOD_PLACES))
   const [messages, setMessages] = useState(() => getMessages())
   const [admin, setAdmin] = useState(isAdminLoggedIn)
-  
-  // НОВЫЙ КОД: состояние для достопримечательностей
-  const [sights, setSights] = useState(() => {
-    const saved = localStorage.getItem('karakol_sights')
-    return saved ? JSON.parse(saved) : []
-  })
-
-  // НОВЫЙ КОД: сохраняем sights в localStorage при изменении
-  useEffect(() => {
-    localStorage.setItem('karakol_sights', JSON.stringify(sights))
-  }, [sights])
 
   const refreshRoutes = useCallback(() => {
     setRoutes(getStoredRoutes(DEFAULT_ROUTES))
@@ -34,6 +29,16 @@ export function AppDataProvider({ children }) {
   const updateRoutes = useCallback((next) => {
     saveRoutes(next)
     setRoutes(getStoredRoutes(DEFAULT_ROUTES))
+  }, [])
+
+  const updateSights = useCallback((next) => {
+    saveSights(next)
+    setSights(getStoredSights(SIGHTS))
+  }, [])
+
+  const updateFoodPlaces = useCallback((next) => {
+    saveFood(next)
+    setFoodPlaces(getStoredFood(FOOD_PLACES))
   }, [])
 
   const submitMessage = useCallback((msg) => {
@@ -52,35 +57,35 @@ export function AppDataProvider({ children }) {
     setAdmin(false)
   }, [])
 
-  // НОВЫЙ КОД: функции для работы с достопримечательностями
-  const addSight = useCallback((sight) => {
-    setSights(prev => [...prev, { ...sight, id: Date.now() }])
-  }, [])
-
-  const updateSight = useCallback((id, updatedSight) => {
-    setSights(prev => prev.map(s => s.id === id ? { ...updatedSight, id } : s))
-  }, [])
-
-  const deleteSight = useCallback((id) => {
-    setSights(prev => prev.filter(s => s.id !== id))
-  }, [])
-
   const value = useMemo(
     () => ({
       routes,
+      sights,
+      foodPlaces,
       messages,
       admin,
-      sights,           // ← добавили
       refreshRoutes,
       updateRoutes,
+      updateSights,
+      updateFoodPlaces,
       submitMessage,
       loginAdmin,
       logoutAdmin,
-      addSight,         // ← добавили
-      updateSight,      // ← добавили
-      deleteSight,      // ← добавили
     }),
-    [routes, messages, admin, sights, refreshRoutes, updateRoutes, submitMessage, loginAdmin, logoutAdmin, addSight, updateSight, deleteSight],
+    [
+      routes,
+      sights,
+      foodPlaces,
+      messages,
+      admin,
+      refreshRoutes,
+      updateRoutes,
+      updateSights,
+      updateFoodPlaces,
+      submitMessage,
+      loginAdmin,
+      logoutAdmin,
+    ],
   )
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>

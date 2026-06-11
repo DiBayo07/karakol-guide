@@ -1,10 +1,13 @@
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Route, Mail, LogOut, Home } from 'lucide-react'
+import { LayoutDashboard, Route, Mail, LogOut, Home, Landmark, Utensils } from 'lucide-react'
 import { useAppData } from '../../context/AppDataContext'
+import { withBase } from '../../lib/basePath'
 
 const LINKS = [
   { to: '/admin', label: 'Обзор', icon: LayoutDashboard, end: true },
+  { to: '/admin/sights', label: 'Достопримечательности', icon: Landmark },
   { to: '/admin/routes', label: 'Маршруты', icon: Route },
+  { to: '/admin/food', label: 'Рестораны/Кафе', icon: Utensils },
   { to: '/admin/messages', label: 'Сообщения', icon: Mail },
 ]
 
@@ -20,16 +23,6 @@ export default function AdminLayout() {
         <div className="p-5 font-bold border-b border-[var(--border)]">
           Admin <span className="text-sky-400">Panel</span>
         </div>
-       <Link 
-  to="/admin/sights" 
-  className={({ isActive }) => 
-    `flex items-center gap-3 px-4 py-2 rounded-lg transition ${
-      isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-    }`
-  }
->
-  🏛️ Достопримечательности
-</Link>
         <nav className="flex-1 p-3 space-y-1">
           {LINKS.map(({ to, label, icon: Icon, end }) => (
             <Link
@@ -39,7 +32,7 @@ export default function AdminLayout() {
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
                 end ? location.pathname === to : location.pathname.startsWith(to)
                   ? 'bg-sky-500/15 text-sky-400'
-                  : 'text-[var(--text-light)] hover:bg-white/5'
+                  : 'text-[var(--text-light)] hover:bg-sky-50'
               }`}
             >
               <Icon size={18} /> {label}
@@ -53,7 +46,7 @@ export default function AdminLayout() {
           </Link>
           <button
             type="button"
-            onClick={() => { logoutAdmin(); window.location.href = '/admin/login' }}
+            onClick={() => { logoutAdmin(); window.location.href = withBase('admin/login') }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[var(--text-light)] hover:text-rose-400"
           >
             <LogOut size={18} /> Выход

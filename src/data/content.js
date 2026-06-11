@@ -1,6 +1,6 @@
 /** Локальные фото в public/images — всегда грузятся без интернета */
 export const IMAGES = {
-  hero: '/images/hero.jpg',
+  hero: '/images/hero.jpg.webp',
   heroSecondary: '/images/issyk-kul.jpg',
   church: '/images/church.jpg',
   mosque: '/images/mosque.jpg',
@@ -410,9 +410,9 @@ export const INFO_SECTIONS = [
 ]
 
 /** Точки для маршрутизатора (достопримечательности + еда) */
-export function getPlannerPois() {
+export function getPlannerPois(sights = SIGHTS) {
   return [
-    ...SIGHTS.map((s) => ({ ...s, poiType: 'sight', name: s.title })),
+    ...sights.map((s) => ({ ...s, poiType: 'sight', name: s.title })),
     ...FOOD_PLACES.map((f) => ({ ...f, poiType: 'food', name: f.title })),
   ]
 }
