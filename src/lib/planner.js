@@ -34,9 +34,9 @@ function sortDayStops(stops) {
  * @param {string[]} params.selectedIds — выбранные POI id
  * @param {Array} params.allPois
  */
-export function buildItinerary({ selectedIds = [], allPois = [], lang = 'ru' }) {
+export function buildItinerary({ selectedIds = [], allPois = [], startLocation = null, lang = 'ru' }) {
   const selected = allPois.filter((p) => selectedIds.includes(p.id))
-  if (selected.length === 0) {
+  if (selected.length === 0 && !startLocation) {
     return {
       days: [],
       totalStops: 0,
@@ -44,9 +44,9 @@ export function buildItinerary({ selectedIds = [], allPois = [], lang = 'ru' }) 
     }
   }
 
-  // Nearest-neighbor sort starting from Karakol center
+  // Nearest-neighbor sort starting from either user location or Karakol center
   const sortedStops = []
-  let current = CENTER
+  let current = startLocation || CENTER
   const unvisited = [...selected]
 
   while (unvisited.length > 0) {
@@ -63,14 +63,20 @@ export function buildItinerary({ selectedIds = [], allPois = [], lang = 'ru' }) 
     sortedStops.push(unvisited.splice(closestIdx, 1)[0])
   }
 
+  // Prepend user geolocation stop if available
+  const stops = startLocation ? [startLocation, ...sortedStops] : sortedStops
+
   // Generate timeline starting at 09:00 (540 mins)
   let time = 9 * 60
-  const timeline = sortedStops.map((stop, i) => {
+  const timeline = stops.map((stop, i) => {
     const start = time
-    const dur = stop.durationMin || 60
+    const isUser = stop.poiType === 'user'
+    const dur = isUser ? 0 : (stop.durationMin || 60)
     time += dur
     const end = time
-    time += 30 // 30-min transit/break
+    if (!isUser) {
+      time += 30 // 30-min transit/break
+    }
     return {
       ...stop,
       order: i + 1,
@@ -88,7 +94,7 @@ export function buildItinerary({ selectedIds = [], allPois = [], lang = 'ru' }) 
   const resultDay = {
     day: 1,
     stops: timeline,
-    totalMin: timeline.reduce((sum, s) => sum + (s.durationMin || 60), 0),
+    totalMin: timeline.reduce((sum, s) => sum + (s.poiType === 'user' ? 0 : (s.durationMin || 60)), 0),
     distanceKm: Math.round(totalDist * 10) / 10,
   }
 

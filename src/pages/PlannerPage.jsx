@@ -17,6 +17,7 @@ export default function PlannerPage() {
   const allPois = useMemo(() => getLocalizedPlannerPois(sights, foodPlaces, lang), [sights, foodPlaces, lang])
   const [selectedIds, setSelectedIds] = useState([])
   const [plan, setPlan] = useState(null)
+  const [loadingLocation, setLoadingLocation] = useState(false)
 
   const sightsPois = useMemo(() => allPois.filter((p) => p.poiType === 'sight'), [allPois])
   const foodPois = useMemo(() => allPois.filter((p) => p.poiType === 'food'), [allPois])
@@ -43,13 +44,44 @@ export default function PlannerPage() {
       )
       return
     }
-    const result = buildItinerary({
-      selectedIds,
-      allPois,
-      lang,
-    })
-    setPlan(result)
-    window.scrollTo({ top: 400, behavior: 'smooth' })
+
+    const build = (startLoc = null) => {
+      const result = buildItinerary({
+        selectedIds,
+        allPois,
+        startLocation: startLoc,
+        lang,
+      })
+      setPlan(result)
+      window.scrollTo({ top: 400, behavior: 'smooth' })
+    }
+
+    if (navigator.geolocation) {
+      setLoadingLocation(true)
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLoadingLocation(false)
+          const userLoc = {
+            id: 'user_location',
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            name: lang === 'en' ? 'My Location' : 'Моё местоположение',
+            address: lang === 'en' ? 'Current geolocation' : 'Текущая геопозиция',
+            poiType: 'user',
+            durationMin: 0,
+          }
+          build(userLoc)
+        },
+        (error) => {
+          console.warn('Geolocation failed, falling back to center:', error)
+          setLoadingLocation(false)
+          build(null)
+        },
+        { timeout: 5000 }
+      )
+    } else {
+      build(null)
+    }
   }
 
   const handleSave = () => {
@@ -169,9 +201,15 @@ export default function PlannerPage() {
                 <button
                   type="button"
                   onClick={handleBuild}
-                  className="btn-primary w-full flex items-center justify-center gap-2 py-4 text-lg shadow-lg font-semibold"
+                  disabled={loadingLocation}
+                  className={`btn-primary w-full flex items-center justify-center gap-2 py-4 text-lg shadow-lg font-semibold ${
+                    loadingLocation ? 'opacity-75 cursor-not-allowed' : ''
+                  }`}
                 >
-                  <Compass size={22} /> {t('planner.build')}
+                  <Compass size={22} className={loadingLocation ? 'animate-spin' : ''} />{' '}
+                  {loadingLocation
+                    ? (lang === 'en' ? 'Getting location...' : 'Определение геопозиции...')
+                    : t('planner.build')}
                 </button>
 
                 {selectedIds.length > 0 && (
